@@ -1,0 +1,246 @@
+'use client'
+
+import React, { useState } from 'react'
+import {
+  ReceiptText,
+  UserRound,
+  ChevronRight,
+  Plus,
+  Minus,
+  Trash2,
+  Tag,
+  CircleDollarSign,
+  ShoppingCart,
+  Users,
+} from 'lucide-react'
+import { useCartStore } from '@/stores/use-cart-store'
+import { mockCustomers } from '@/lib/mock-data'
+
+interface PosCartPanelProps {
+  onOpenPayment: () => void
+}
+
+export function PosCartPanel({ onOpenPayment }: PosCartPanelProps) {
+  const {
+    items,
+    selectedCustomer,
+    discount,
+    setCustomer,
+    updateQuantity,
+    removeItem,
+    setDiscount,
+    getSubtotal,
+    getGrandTotal,
+  } = useCartStore()
+
+  const [customerPickerOpen, setCustomerPickerOpen] = useState(false)
+  const [discountOpen, setDiscountOpen] = useState(false)
+  const [customDiscount, setCustomDiscount] = useState<number>(discount)
+
+  const subtotal = getSubtotal()
+  const grandTotal = getGrandTotal()
+  const totalItemCount = items.reduce((acc, curr) => acc + curr.quantity, 0)
+
+  return (
+    <section className="flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-card">
+      {/* Header */}
+      <div className="border-b border-slate-100 p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-bold text-slate-900">Keranjang Kasir</h2>
+            <p className="mt-0.5 text-xs text-slate-400">
+              {totalItemCount} item dalam transaksi berjalan
+            </p>
+          </div>
+          <div className="flex size-9 items-center justify-center rounded-xl bg-emerald-50 text-[#166534]">
+            <ReceiptText size={18} />
+          </div>
+        </div>
+
+        {/* Customer Selector Button */}
+        <div className="relative mt-3">
+          <button
+            onClick={() => setCustomerPickerOpen(!customerPickerOpen)}
+            className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/80 px-3.5 py-2.5 text-xs font-semibold text-slate-700 transition hover:border-emerald-500 hover:bg-white"
+          >
+            <div className="flex items-center gap-2">
+              <UserRound size={16} className="text-[#166534]" />
+              <div className="text-left">
+                <div className="font-bold">
+                  {selectedCustomer ? selectedCustomer.name : 'Pelanggan Umum (Tanpa Piutang)'}
+                </div>
+                {selectedCustomer && (
+                  <div className="text-[10px] text-slate-400">
+                    {selectedCustomer.phone} • Limit Rp {selectedCustomer.creditLimit.toLocaleString('id-ID')}
+                  </div>
+                )}
+              </div>
+            </div>
+            <ChevronRight size={15} className="text-slate-400" />
+          </button>
+
+          {/* Customer Dropdown */}
+          {customerPickerOpen && (
+            <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
+              <button
+                onClick={() => {
+                  setCustomer(null)
+                  setCustomerPickerOpen(false)
+                }}
+                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                <UserRound size={14} className="text-slate-400" /> Pelanggan Umum
+              </button>
+              <div className="my-1 border-t border-slate-100" />
+              <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase">
+                Daftar Petani / Mitra
+              </div>
+              {mockCustomers.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => {
+                    setCustomer(c)
+                    setCustomerPickerOpen(false)
+                  }}
+                  className="flex w-full flex-col rounded-xl px-3 py-2 text-left text-xs hover:bg-emerald-50"
+                >
+                  <div className="flex items-center justify-between font-bold text-slate-800">
+                    <span>{c.name}</span>
+                    <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-600 uppercase">
+                      {c.type}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-400">
+                    Sisa Limit Piutang: Rp {(c.creditLimit - c.currentCredit).toLocaleString('id-ID')}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Cart Items List */}
+      <div className="flex-1 space-y-3 overflow-y-auto p-4">
+        {items.map((item) => (
+          <div
+            key={item.product.id}
+            className="group relative rounded-2xl border border-slate-100 bg-slate-50/70 p-3 transition hover:border-slate-200 hover:bg-white"
+          >
+            <div className="flex justify-between items-start gap-2">
+              <div className="min-w-0 flex-1">
+                <h4 className="text-xs font-bold text-slate-800 truncate">
+                  {item.product.name}
+                </h4>
+                <div className="mt-0.5 text-[11px] text-slate-400 font-mono">
+                  @ Rp {item.price.toLocaleString('id-ID')} / {item.product.unit}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs font-black text-slate-900">
+                  Rp {item.subtotal.toLocaleString('id-ID')}
+                </div>
+              </div>
+            </div>
+
+            {/* Quantity Controls */}
+            <div className="mt-3 flex items-center justify-between border-t border-slate-100/80 pt-2">
+              <button
+                onClick={() => removeItem(item.product.id)}
+                className="text-slate-400 hover:text-red-500 transition p-1"
+                aria-label="Hapus item"
+              >
+                <Trash2 size={14} />
+              </button>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                  className="flex size-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-50"
+                >
+                  <Minus size={13} />
+                </button>
+                <span className="w-8 text-center text-xs font-bold text-slate-800">
+                  {item.quantity}
+                </span>
+                <button
+                  onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                  className="flex size-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-50"
+                >
+                  <Plus size={13} />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {items.length === 0 && (
+          <div className="flex h-full min-h-[220px] flex-col items-center justify-center text-center p-6">
+            <div className="flex size-14 items-center justify-center rounded-full bg-slate-100 text-slate-300 mb-3">
+              <ShoppingCart size={28} />
+            </div>
+            <p className="text-xs font-bold text-slate-600">Keranjang Kasir Kosong</p>
+            <p className="mt-1 text-[11px] text-slate-400 max-w-[200px]">
+              Klik pada produk di katalog atau scan barcode untuk menambah transaksi.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Summary & Checkout Footer */}
+      <div className="border-t border-slate-100 bg-slate-50/70 p-5 space-y-3">
+        <div className="space-y-1.5 text-xs">
+          <div className="flex justify-between text-slate-500">
+            <span>Subtotal ({totalItemCount} item)</span>
+            <span className="font-semibold text-slate-800">Rp {subtotal.toLocaleString('id-ID')}</span>
+          </div>
+
+          <div className="flex justify-between items-center text-slate-500">
+            <span>Diskon Promosi</span>
+            {discountOpen ? (
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  value={customDiscount}
+                  onChange={(e) => setCustomDiscount(Number(e.target.value))}
+                  className="w-24 rounded-lg border border-slate-200 px-2 py-0.5 text-right text-xs outline-none focus:border-[#166534]"
+                />
+                <button
+                  onClick={() => {
+                    setDiscount(customDiscount)
+                    setDiscountOpen(false)
+                  }}
+                  className="rounded-lg bg-[#166534] px-2 py-0.5 text-[10px] font-bold text-white"
+                >
+                  Ok
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setDiscountOpen(true)}
+                className="flex items-center gap-1 font-bold text-[#166534] hover:underline"
+              >
+                <Tag size={12} />
+                {discount > 0 ? `- Rp ${discount.toLocaleString('id-ID')}` : '+ Tambah Diskon'}
+              </button>
+            )}
+          </div>
+
+          <div className="flex justify-between border-t border-slate-200 pt-2 text-base font-extrabold text-slate-900">
+            <span>Total Bayar</span>
+            <span className="text-[#166534]">Rp {grandTotal.toLocaleString('id-ID')}</span>
+          </div>
+        </div>
+
+        <button
+          onClick={onOpenPayment}
+          disabled={items.length === 0}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#166534] py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-900/15 transition hover:bg-emerald-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <CircleDollarSign size={18} /> Proses Pembayaran (F4)
+        </button>
+      </div>
+    </section>
+  )
+}
+
