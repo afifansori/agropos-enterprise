@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { ShieldAlert, Home, ShoppingCart, Boxes } from 'lucide-react'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
+import { BottomNav } from '@/components/layout/bottom-nav'
 import { ToastContainer } from '@/components/ui/toast-container'
 import { useAuthStore } from '@/stores/use-auth-store'
 import { usePermissionStore } from '@/stores/use-permission-store'
@@ -49,7 +50,7 @@ export default function DashboardLayout({
       <Sidebar />
       <div className="lg:pl-[270px] flex min-h-screen flex-col">
         <Header />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8">
           <div className="mx-auto max-w-[1500px]">
             {isAllowed ? (
               children
@@ -96,6 +97,7 @@ export default function DashboardLayout({
           </div>
         </main>
       </div>
+      <BottomNav />
       <ToastContainer />
     </div>
   )

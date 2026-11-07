@@ -17,4 +17,6 @@ export interface StoreInfo {
   phone: string
   taxNumber?: string
   email: string
+  logoUrl?: string
+  faviconUrl?: string
 }

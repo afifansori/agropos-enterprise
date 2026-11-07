@@ -18,8 +18,11 @@ import {
   Send,
   AlertTriangle,
   FileCheck,
+  Image as ImageIcon,
+  Trash2,
 } from 'lucide-react'
 import { useAppStore } from '@/stores/use-app-store'
+import { useAuthStore } from '@/stores/use-auth-store'
 import {
   mockProducts,
   mockSuppliers,
@@ -31,15 +34,18 @@ import {
 
 export default function PengaturanPage() {
   const { addToast } = useAppStore()
+  const { store, updateStore } = useAuthStore()
   const [activeTab, setActiveTab] = useState('Profil Toko Pusat')
   const [saved, setSaved] = useState(false)
 
   // 1. Profil Toko State
-  const [orgName, setOrgName] = useState('PT Agro Tani Makmur')
-  const [phone, setPhone] = useState('0251-8622100')
-  const [email, setEmail] = useState('halo@agrotani.id')
-  const [taxId, setTaxId] = useState('01.234.567.8-901.000')
-  const [address, setAddress] = useState('Jl. Raya Pertanian No. 18, Dramaga, Kab. Bogor, Jawa Barat 16610')
+  const [orgName, setOrgName] = useState(store.name || 'PT Agro Tani Makmur')
+  const [phone, setPhone] = useState(store.phone || '0251-8622100')
+  const [email, setEmail] = useState(store.email || 'halo@agrotani.id')
+  const [taxId, setTaxId] = useState(store.taxNumber || '01.234.567.8-901.000')
+  const [address, setAddress] = useState(store.address || 'Jl. Raya Pertanian No. 18, Dramaga, Kab. Bogor, Jawa Barat 16610')
+  const [logoUrl, setLogoUrl] = useState<string>(store.logoUrl || '')
+  const [faviconUrl, setFaviconUrl] = useState<string>(store.faviconUrl || '')
 
   // 2. Printer State
   const [paperSize, setPaperSize] = useState<'58mm' | '80mm'>('80mm')
@@ -64,9 +70,60 @@ export default function PengaturanPage() {
   const [restrictLocalIp, setRestrictLocalIp] = useState(true)
   const [isRestoring, setIsRestoring] = useState(false)
 
+  const handleUploadLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Ukuran file logo maksimal 2MB')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const result = event.target?.result as string
+      setLogoUrl(result)
+      addToast('Logo desktop berhasil dipilih. Klik Simpan Pengaturan.', 'info')
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleUploadFavicon = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 1 * 1024 * 1024) {
+      alert('Ukuran file favicon maksimal 1MB')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const result = event.target?.result as string
+      setFaviconUrl(result)
+      addToast('Favicon / Logo aplikasi berhasil dipilih. Klik Simpan Pengaturan.', 'info')
+    }
+    reader.readAsDataURL(file)
+  }
+
   const handleSave = () => {
     setSaved(true)
-    addToast('Semua preferensi pengaturan Toko Pusat berhasil disimpan!', 'success')
+    updateStore({
+      name: orgName,
+      phone,
+      email,
+      taxNumber: taxId,
+      address,
+      logoUrl,
+      faviconUrl,
+    })
+
+    // Update browser favicon dynamically if custom favicon provided
+    if (typeof document !== 'undefined' && faviconUrl) {
+      const link = document.querySelector("link[rel*='icon']") as HTMLLinkElement || document.createElement('link')
+      link.type = 'image/x-icon'
+      link.rel = 'shortcut icon'
+      link.href = faviconUrl
+      document.getElementsByTagName('head')[0].appendChild(link)
+    }
+
+    addToast('Semua preferensi pengaturan Toko Pusat & Logo berhasil disimpan!', 'success')
     setTimeout(() => setSaved(false), 2500)
   }
 
@@ -202,7 +259,105 @@ export default function PengaturanPage() {
                 </p>
               </div>
 
-              <div className="p-6 space-y-4">
+              <div className="p-6 space-y-6">
+                {/* Branding & Upload Logo Section */}
+                <div className="rounded-2xl border border-slate-200/90 bg-slate-50/60 p-5 space-y-4">
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                      Identitas Visual & Logo Toko
+                    </h3>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Unggah logo untuk header desktop dan icon aplikasi (favicon/homescreen).
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Upload Logo Desktop */}
+                    <div className="rounded-xl border border-slate-200 bg-white p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-bold text-slate-700">Logo Utama (Desktop)</span>
+                        {logoUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setLogoUrl('')}
+                            className="text-[10px] text-red-500 hover:underline flex items-center gap-1"
+                          >
+                            <Trash2 size={11} /> Reset
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className="flex size-14 shrink-0 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 overflow-hidden">
+                          {logoUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={logoUrl} alt="Logo Toko" className="size-full object-contain p-1" />
+                          ) : (
+                            <ImageIcon size={22} className="text-slate-400" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100 transition">
+                            <Upload size={13} /> Pilih Gambar
+                            <input
+                              type="file"
+                              accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                              onChange={handleUploadLogo}
+                              className="hidden"
+                            />
+                          </label>
+                          <p className="mt-1 text-[10px] text-slate-400">
+                            PNG, JPG, atau SVG transparan (maks. 2MB).
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Upload Favicon / Mobile App Icon */}
+                    <div className="rounded-xl border border-slate-200 bg-white p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-bold text-slate-700">Favicon & Icon Aplikasi (PWA)</span>
+                        {faviconUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setFaviconUrl('')}
+                            className="text-[10px] text-red-500 hover:underline flex items-center gap-1"
+                          >
+                            <Trash2 size={11} /> Reset
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className="flex size-14 shrink-0 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 overflow-hidden">
+                          {faviconUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={faviconUrl} alt="Favicon" className="size-full object-contain p-1" />
+                          ) : (
+                            <div className="flex size-8 items-center justify-center rounded-lg bg-[#166534] text-white text-xs font-black">
+                              A
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100 transition">
+                            <Upload size={13} /> Ganti Favicon
+                            <input
+                              type="file"
+                              accept="image/png,image/x-icon,image/svg+xml"
+                              onChange={handleUploadFavicon}
+                              className="hidden"
+                            />
+                          </label>
+                          <p className="mt-1 text-[10px] text-slate-400">
+                            Rasio 1:1 persegi (PNG/ICO/SVG, maks. 1MB).
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1.5">Nama Usaha / Toko</label>
