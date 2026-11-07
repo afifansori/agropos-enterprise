@@ -93,3 +93,4 @@ sizes.forEach((s) => {
   fs.writeFileSync(filePath, png);
   console.log(`Generated: ${filePath} (${png.length} bytes)`);
 });
+
