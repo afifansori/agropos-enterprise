@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   ShoppingCart,
   PackageSearch,
+  Tag,
   Boxes,
   ClipboardList,
   Truck,
@@ -49,6 +50,7 @@ const navigationGroups: NavGroup[] = [
     label: 'OPERASIONAL',
     items: [
       { label: 'Produk', href: '/produk', icon: PackageSearch },
+      { label: 'Kategori', href: '/kategori', icon: Tag },
       { label: 'Inventori', href: '/inventori', icon: Boxes, badge: '8' },
       { label: 'Pembelian', href: '/pembelian', icon: ClipboardList },
       { label: 'Supplier', href: '/supplier', icon: Truck },

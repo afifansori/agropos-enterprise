@@ -7,7 +7,7 @@ interface AuthState {
   store: StoreInfo
   isAuthenticated: boolean
   isHydrated: boolean
-  login: (email: string) => Promise<boolean>
+  login: (email: string, password: string) => Promise<boolean>
   logout: () => void
   initAuth: () => void
 }
@@ -41,8 +41,11 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  login: async (email: string) => {
-    const foundUser = mockUsers.find((u) => u.email.toLowerCase() === email.toLowerCase()) || mockUsers[0]
+  login: async (email: string, password: string) => {
+    // All demo accounts use password 'agropos123'
+    if (password !== 'agropos123') return false
+    const foundUser = mockUsers.find((u) => u.email.toLowerCase() === email.toLowerCase())
+    if (!foundUser) return false
     if (typeof window !== 'undefined') {
       localStorage.setItem('agropos_session', JSON.stringify(foundUser))
       localStorage.setItem('agropos_auth_status', 'authenticated')

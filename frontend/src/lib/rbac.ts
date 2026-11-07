@@ -173,6 +173,7 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
 
 export function getModuleByPath(pathname: string): AppModule | null {
   if (pathname === '/') return 'dashboard'
+  if (pathname.startsWith('/kategori')) return 'produk'
   const matched = APP_MODULES.find((m) => m.path !== '/' && pathname.startsWith(m.path))
   return matched ? matched.id : null
 }

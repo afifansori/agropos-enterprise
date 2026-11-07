@@ -2,53 +2,76 @@ import { create } from 'zustand'
 import { CartItem, Customer, PaymentMethod, SaleTransaction } from '@/types/pos'
 import { Product } from '@/types/product'
 
+export type PriceMode = 'retail' | 'wholesale'
+
 interface CartState {
   items: CartItem[]
   selectedCustomer: Customer | null
-  discount: number
+  discountPercent: number  // Global discount % (0-100)
   paymentMethod: PaymentMethod
+  priceMode: PriceMode
+
   addItem: (product: Product, quantity?: number) => void
   removeItem: (productId: string) => void
   updateQuantity: (productId: string, quantity: number) => void
-  setDiscount: (discount: number) => void
+  updateItemDiscount: (productId: string, discountPercent: number) => void
+  setPriceMode: (mode: PriceMode) => void
+  setDiscountPercent: (percent: number) => void
   setCustomer: (customer: Customer | null) => void
   setPaymentMethod: (method: PaymentMethod) => void
   clearCart: () => void
   getSubtotal: () => number
-  getTotalDiscount: () => number
+  getDiscountAmount: () => number
   getGrandTotal: () => number
   checkout: (amountPaid: number, cashierName: string) => SaleTransaction
+}
+
+function getItemPrice(product: Product, mode: PriceMode, qty: number): number {
+  if (
+    mode === 'wholesale' &&
+    product.wholesalePrice > 0 &&
+    qty >= product.wholesaleMinQty
+  ) {
+    return product.wholesalePrice
+  }
+  return product.sellPrice
 }
 
 export const useCartStore = create<CartState>((set, get) => ({
   items: [],
   selectedCustomer: null,
-  discount: 0,
+  discountPercent: 0,
   paymentMethod: 'cash',
+  priceMode: 'retail',
 
   addItem: (product: Product, quantity = 1) => {
-    const { items } = get()
+    const { items, priceMode } = get()
     const existingIndex = items.findIndex((i) => i.product.id === product.id)
 
     if (existingIndex > -1) {
       const updated = [...items]
       const newQty = updated[existingIndex].quantity + quantity
+      const basePrice = getItemPrice(product, priceMode, newQty)
+      const disc = updated[existingIndex].discount // item discount %
+      const priceAfterDisc = basePrice * (1 - disc / 100)
       updated[existingIndex] = {
         ...updated[existingIndex],
         quantity: newQty,
-        subtotal: newQty * updated[existingIndex].price,
+        price: basePrice,
+        subtotal: newQty * priceAfterDisc,
       }
       set({ items: updated })
     } else {
+      const basePrice = getItemPrice(product, priceMode, quantity)
       set({
         items: [
           ...items,
           {
             product,
             quantity,
-            price: product.sellPrice,
-            discount: 0,
-            subtotal: quantity * product.sellPrice,
+            price: basePrice,
+            discount: 0, // item-level discount %
+            subtotal: quantity * basePrice,
           },
         ],
       })
@@ -64,12 +87,17 @@ export const useCartStore = create<CartState>((set, get) => ({
       get().removeItem(productId)
       return
     }
+    const { priceMode } = get()
     const updated = get().items.map((item) => {
       if (item.product.id === productId) {
+        const basePrice = getItemPrice(item.product, priceMode, quantity)
+        const disc = item.discount
+        const priceAfterDisc = basePrice * (1 - disc / 100)
         return {
           ...item,
           quantity,
-          subtotal: quantity * item.price,
+          price: basePrice,
+          subtotal: quantity * priceAfterDisc,
         }
       }
       return item
@@ -77,28 +105,68 @@ export const useCartStore = create<CartState>((set, get) => ({
     set({ items: updated })
   },
 
-  setDiscount: (discount: number) => set({ discount }),
+  updateItemDiscount: (productId: string, discountPercent: number) => {
+    const pct = Math.min(100, Math.max(0, discountPercent))
+    const updated = get().items.map((item) => {
+      if (item.product.id === productId) {
+        const priceAfterDisc = item.price * (1 - pct / 100)
+        return {
+          ...item,
+          discount: pct,
+          subtotal: item.quantity * priceAfterDisc,
+        }
+      }
+      return item
+    })
+    set({ items: updated })
+  },
+
+  setPriceMode: (priceMode: PriceMode) => {
+    // Recalculate all item prices when switching mode
+    const updated = get().items.map((item) => {
+      const basePrice = getItemPrice(item.product, priceMode, item.quantity)
+      const disc = item.discount
+      const priceAfterDisc = basePrice * (1 - disc / 100)
+      return {
+        ...item,
+        price: basePrice,
+        subtotal: item.quantity * priceAfterDisc,
+      }
+    })
+    set({ priceMode, items: updated })
+  },
+
+  setDiscountPercent: (percent: number) =>
+    set({ discountPercent: Math.min(100, Math.max(0, percent)) }),
+
   setCustomer: (selectedCustomer: Customer | null) => set({ selectedCustomer }),
   setPaymentMethod: (paymentMethod: PaymentMethod) => set({ paymentMethod }),
 
-  clearCart: () => set({ items: [], selectedCustomer: null, discount: 0, paymentMethod: 'cash' }),
+  clearCart: () =>
+    set({
+      items: [],
+      selectedCustomer: null,
+      discountPercent: 0,
+      paymentMethod: 'cash',
+      priceMode: 'retail',
+    }),
 
-  getSubtotal: () => {
-    return get().items.reduce((acc, curr) => acc + curr.subtotal, 0)
-  },
+  getSubtotal: () => get().items.reduce((acc, curr) => acc + curr.subtotal, 0),
 
-  getTotalDiscount: () => {
-    return get().discount
+  getDiscountAmount: () => {
+    const subtotal = get().getSubtotal()
+    const pct = get().discountPercent
+    return Math.round(subtotal * (pct / 100))
   },
 
   getGrandTotal: () => {
     const subtotal = get().getSubtotal()
-    const discount = get().getTotalDiscount()
-    return Math.max(0, subtotal - discount)
+    const disc = get().getDiscountAmount()
+    return Math.max(0, subtotal - disc)
   },
 
   checkout: (amountPaid: number, cashierName: string) => {
-    const { items, selectedCustomer, paymentMethod, getSubtotal, getTotalDiscount, getGrandTotal, clearCart } = get()
+    const { items, selectedCustomer, paymentMethod, getSubtotal, getDiscountAmount, getGrandTotal, clearCart } = get()
     const grandTotal = getGrandTotal()
     const changeAmount = paymentMethod === 'cash' ? Math.max(0, amountPaid - grandTotal) : 0
 
@@ -110,7 +178,7 @@ export const useCartStore = create<CartState>((set, get) => ({
       customer: selectedCustomer || undefined,
       items: [...items],
       subtotal: getSubtotal(),
-      discountAmount: getTotalDiscount(),
+      discountAmount: getDiscountAmount(),
       taxAmount: 0,
       grandTotal,
       paymentMethod,
@@ -124,4 +192,3 @@ export const useCartStore = create<CartState>((set, get) => ({
     return transaction
   },
 }))
-

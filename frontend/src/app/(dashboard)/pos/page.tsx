@@ -5,18 +5,16 @@ import {
   Search,
   Barcode,
   PackageSearch,
-  ShoppingCart,
-  CheckCircle2,
 } from 'lucide-react'
 import { PosProductCard } from '@/components/pos/pos-product-card'
 import { PosCartPanel } from '@/components/pos/pos-cart-panel'
 import { PaymentModal } from '@/components/pos/payment-modal'
 import { ReceiptModal } from '@/components/pos/receipt-modal'
-import { mockProducts } from '@/lib/mock-data'
 import { useCartStore } from '@/stores/use-cart-store'
+import { useProductStore } from '@/stores/use-product-store'
 import { useAppStore } from '@/stores/use-app-store'
 import { useAuthStore } from '@/stores/use-auth-store'
-import { Product, ProductCategory } from '@/types/product'
+import { ProductCategory } from '@/types/product'
 import { SaleTransaction } from '@/types/pos'
 
 const categories: ('Semua' | ProductCategory)[] = [
@@ -31,6 +29,7 @@ const categories: ('Semua' | ProductCategory)[] = [
 
 export default function PosTerminalPage() {
   const { addItem } = useCartStore()
+  const { searchProducts, products } = useProductStore()
   const { addToast } = useAppStore()
   const { store } = useAuthStore()
 
@@ -40,20 +39,17 @@ export default function PosTerminalPage() {
   const [isReceiptOpen, setIsReceiptOpen] = useState(false)
   const [lastTransaction, setLastTransaction] = useState<SaleTransaction | null>(null)
 
-  const filteredProducts = mockProducts.filter((product) => {
-    const matchesCategory = selectedCategory === 'Semua' || product.category === selectedCategory
-    const matchesSearch =
-      product.name.toLowerCase().includes(search.toLowerCase()) ||
-      product.sku.toLowerCase().includes(search.toLowerCase()) ||
-      (product.barcode && product.barcode.includes(search))
-    return matchesCategory && matchesSearch
-  })
+  // Pakai useProductStore supaya sinkron dengan menu Produk
+  const filteredProducts = searchProducts(search, selectedCategory).filter(
+    (p) => p.status !== 'archived'
+  )
 
   const handleBarcodeScan = () => {
-    // Simulate instant scan of Roundup
-    const product = mockProducts[0]
-    addItem(product)
-    addToast(`Barcode Scan: ${product.name} ditambahkan ke keranjang`)
+    const product = products.find((p) => p.status === 'active') || products[0]
+    if (product) {
+      addItem(product)
+      addToast(`Barcode Scan: ${product.name} ditambahkan ke keranjang`)
+    }
   }
 
   const handlePaymentSuccess = (transaction: SaleTransaction) => {
@@ -118,11 +114,10 @@ export default function PosTerminalPage() {
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
-                  className={`whitespace-nowrap rounded-xl px-4 py-2 text-xs font-bold transition ${
-                    active
+                  className={`whitespace-nowrap rounded-xl px-4 py-2 text-xs font-bold transition ${active
                       ? 'bg-[#166534] text-white shadow-md shadow-emerald-900/15'
                       : 'border border-slate-200/80 bg-white text-slate-600 hover:bg-slate-50'
-                  }`}
+                    }`}
                 >
                   {cat}
                 </button>
@@ -176,4 +171,3 @@ export default function PosTerminalPage() {
     </div>
   )
 }
-

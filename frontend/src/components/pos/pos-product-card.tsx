@@ -1,6 +1,7 @@
 import React from 'react'
-import { Plus, Leaf, AlertCircle } from 'lucide-react'
+import { Plus, Leaf, AlertCircle, TrendingDown } from 'lucide-react'
 import { Product } from '@/types/product'
+import { useCartStore } from '@/stores/use-cart-store'
 
 interface PosProductCardProps {
   product: Product
@@ -8,8 +9,10 @@ interface PosProductCardProps {
 }
 
 export function PosProductCard({ product, onAdd }: PosProductCardProps) {
+  const { priceMode } = useCartStore()
   const isOutOfStock = product.totalStock <= 0
   const isLowStock = product.totalStock <= product.minStock
+  const showWholesale = priceMode === 'wholesale'
 
   return (
     <button
@@ -40,14 +43,14 @@ export function PosProductCard({ product, onAdd }: PosProductCardProps) {
       </div>
 
       <div className="mt-4 pt-3 border-t border-slate-100">
+        {/* Harga Eceran */}
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-xs text-slate-400 font-medium">Harga Jual</div>
-            <div className="text-base font-extrabold text-[#166534]">
+            <div className="text-[10px] text-slate-400 font-medium">Harga Eceran</div>
+            <div className={`text-sm font-extrabold ${showWholesale ? 'text-slate-400 line-through' : 'text-[#166534]'}`}>
               Rp {product.sellPrice.toLocaleString('id-ID')}
             </div>
           </div>
-
           <span
             className={`flex size-8 items-center justify-center rounded-xl transition ${
               isOutOfStock
@@ -56,6 +59,17 @@ export function PosProductCard({ product, onAdd }: PosProductCardProps) {
             }`}
           >
             <Plus size={16} />
+          </span>
+        </div>
+
+        {/* Harga Grosir */}
+        <div className={`mt-1.5 flex items-center gap-1.5 rounded-lg px-2 py-1 ${showWholesale ? 'bg-emerald-50' : 'bg-slate-50'}`}>
+          <TrendingDown size={11} className={showWholesale ? 'text-emerald-600' : 'text-slate-400'} />
+          <span className={`text-[10px] font-bold ${showWholesale ? 'text-emerald-700' : 'text-slate-400'}`}>
+            Grosir ≥{product.wholesaleMinQty} {product.unit}:
+          </span>
+          <span className={`text-[10px] font-black ${showWholesale ? 'text-emerald-700' : 'text-slate-400'}`}>
+            Rp {product.wholesalePrice.toLocaleString('id-ID')}
           </span>
         </div>
 
@@ -76,4 +90,3 @@ export function PosProductCard({ product, onAdd }: PosProductCardProps) {
     </button>
   )
 }
-

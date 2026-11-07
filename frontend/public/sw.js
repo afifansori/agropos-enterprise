@@ -1,0 +1,50 @@
+const CACHE_NAME = 'agropos-v1'
+const STATIC_ASSETS = [
+  '/',
+  '/pos',
+  '/produk',
+  '/inventori',
+  '/manifest.json',
+]
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(STATIC_ASSETS).catch(() => {
+        // Ignore cache failures during install
+      })
+    })
+  )
+  self.skipWaiting()
+})
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
+    )
+  )
+  self.clients.claim()
+})
+
+self.addEventListener('fetch', (event) => {
+  // Only handle GET requests
+  if (event.request.method !== 'GET') return
+  // Skip chrome-extension and non-http requests
+  if (!event.request.url.startsWith('http')) return
+
+  event.respondWith(
+    caches.match(event.request).then((cached) => {
+      const fetchPromise = fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const clone = response.clone()
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone))
+          }
+          return response
+        })
+        .catch(() => cached)
+      return cached || fetchPromise
+    })
+  )
+})

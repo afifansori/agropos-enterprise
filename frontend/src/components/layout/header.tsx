@@ -27,7 +27,7 @@ import { mockUsers } from '@/lib/mock-data'
 
 export function Header() {
   const router = useRouter()
-  const { currentUser, store, logout, login } = useAuthStore()
+  const { currentUser, store, logout } = useAuthStore()
   const { toggleSidebar, addToast } = useAppStore()
   const [profileOpen, setProfileOpen] = useState(false)
   const [storeModalOpen, setStoreModalOpen] = useState(false)
@@ -151,32 +151,16 @@ export function Header() {
                   <Settings size={16} /> Pengaturan Toko & Printer
                 </Link>
 
-                {/* Quick Role Switcher for Testing/Demo */}
+                {/* Role Info Box */}
                 <div className="px-3 py-2 border-t border-slate-100 bg-slate-50/70 rounded-xl my-1.5">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                    Ganti Role / Akun Demo:
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">
+                    Peran Saat Ini:
                   </p>
-                  <div className="grid grid-cols-1 gap-1 text-[11px] font-semibold">
-                    {mockUsers.map((u) => (
-                      <button
-                        key={u.id}
-                        type="button"
-                        onClick={() => {
-                          login(u.email)
-                          addToast(`Beralih ke akun ${u.name} (Role: ${u.role.toUpperCase()})`, 'success')
-                        }}
-                        className={`flex items-center justify-between p-1.5 rounded-lg text-left transition ${
-                          currentUser?.email === u.email
-                            ? 'bg-emerald-100/70 text-[#166534] font-bold'
-                            : 'text-slate-600 hover:bg-white'
-                        }`}
-                      >
-                        <span className="truncate">{u.name}</span>
-                        <span className="uppercase text-[9px] px-1.5 py-0.5 rounded bg-white text-slate-500 font-bold border border-slate-200">
-                          {u.role}
-                        </span>
-                      </button>
-                    ))}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                      {currentUser?.role}
+                    </span>
+                    <span className="inline-flex size-2 rounded-full bg-emerald-500 animate-pulse" />
                   </div>
                 </div>
 

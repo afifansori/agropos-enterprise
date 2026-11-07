@@ -10,19 +10,40 @@ import {
   EyeOff,
   ChevronRight,
   Leaf,
+  Lock,
 } from 'lucide-react'
 import { Logo } from '@/components/layout/logo'
 import { useAuthStore } from '@/stores/use-auth-store'
+
+const DEMO_ACCOUNTS = [
+  { label: '👤 Owner', name: 'Arif Setiawan', email: 'owner@agropos.id', role: 'owner', redirectTo: '/' },
+  { label: '⚙️ Admin', name: 'Rina Wulandari', email: 'admin@agropos.id', role: 'admin', redirectTo: '/' },
+  { label: '🛒 Kasir', name: 'Budi Santoso', email: 'kasir@agropos.id', role: 'cashier', redirectTo: '/pos' },
+  { label: '📦 Gudang', name: 'Dedi Pratama', email: 'gudang@agropos.id', role: 'warehouse', redirectTo: '/inventori' },
+  { label: '🚚 Supplier', name: 'PT Petro Kimia', email: 'supplier@agropos.id', role: 'supplier', redirectTo: '/' },
+]
+
+function getRoleRedirect(role: string): string {
+  const map: Record<string, string> = {
+    owner: '/',
+    admin: '/',
+    cashier: '/pos',
+    warehouse: '/inventori',
+    supplier: '/',
+  }
+  return map[role] || '/'
+}
 
 export default function LoginPage() {
   const router = useRouter()
   const { login } = useAuthStore()
 
   const [email, setEmail] = useState('owner@agropos.id')
-  const [password, setPassword] = useState('agropos123')
+  const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [selectedRole, setSelectedRole] = useState('owner')
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -34,21 +55,30 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
 
-    setTimeout(async () => {
-      await login(email)
-      setLoading(false)
-      router.push('/')
-    }, 600)
+    await new Promise((r) => setTimeout(r, 600))
+    const success = await login(email, password)
+    setLoading(false)
+
+    if (!success) {
+      setError('Email atau kata sandi salah. Periksa kembali.')
+      return
+    }
+
+    // Find user role to redirect correctly
+    const account = DEMO_ACCOUNTS.find((a) => a.email.toLowerCase() === email.toLowerCase())
+    router.push(account?.redirectTo || '/')
   }
 
-  const setDemoAccount = (demoEmail: string) => {
-    setEmail(demoEmail)
+  const setDemoAccount = (acc: typeof DEMO_ACCOUNTS[0]) => {
+    setEmail(acc.email)
     setPassword('agropos123')
+    setSelectedRole(acc.role)
+    setError('')
   }
 
   return (
     <main className="min-h-screen bg-white lg:grid lg:grid-cols-[1.05fr_.95fr]">
-      {/* Left Brand Showcase Section */}
+      {/* Left Brand Section */}
       <section className="relative hidden overflow-hidden bg-gradient-to-br from-[#0b3b21] via-[#125a2f] to-[#0a3c22] p-12 lg:flex lg:flex-col xl:p-16">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:24px_24px]" />
         <div className="absolute -left-24 bottom-24 size-80 rounded-full bg-emerald-400/10 blur-3xl" />
@@ -81,14 +111,14 @@ export default function LoginPage() {
           </h1>
 
           <p className="mt-6 text-sm leading-7 text-emerald-100/80">
-            Kendali penuh stok per batch (FEFO), kasir POS cepat, purchase order supplier, piutang kelompok tani, dan keuangan Toko Pusat terpadu.
+            Kendali penuh stok per batch (FEFO), kasir POS cepat, harga grosir & eceran, laporan keuangan Toko Pusat terpadu.
           </p>
 
           <div className="mt-10 grid grid-cols-3 gap-3">
             {[
               ['Toko Pusat', 'Operasional & Kasir'],
               ['Batch & FEFO', 'Cegah Kedaluwarsa'],
-              ['Multi-Payment', 'Tunai, QRIS & Tempo'],
+              ['Grosir & Eceran', 'Fleksibel & Presisi'],
             ].map(([title, desc]) => (
               <div key={title} className="rounded-2xl border border-white/10 bg-white/[0.07] p-3.5 backdrop-blur-sm">
                 <div className="text-sm font-bold text-white">{title}</div>
@@ -118,7 +148,7 @@ export default function LoginPage() {
               Selamat datang kembali
             </h2>
             <p className="mt-1.5 text-sm text-slate-500">
-              Masuk untuk melanjutkan ke operasional AGROPOS.
+              Masuk ke AgroPOS dengan akun role Anda.
             </p>
           </div>
 
@@ -140,7 +170,7 @@ export default function LoginPage() {
             <label className="block">
               <span className="mb-2 block text-xs font-bold text-slate-700">Kata Sandi</span>
               <div className="flex h-12 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3.5 text-slate-600 shadow-sm transition focus-within:border-[#166534] focus-within:ring-4 focus-within:ring-emerald-50">
-                <ShieldCheck size={18} className="text-slate-400" />
+                <Lock size={18} className="text-slate-400" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
@@ -158,16 +188,6 @@ export default function LoginPage() {
               </div>
             </label>
 
-            <div className="flex items-center justify-between text-xs">
-              <label className="flex items-center gap-2 text-slate-600 cursor-pointer">
-                <input type="checkbox" defaultChecked className="rounded border-slate-300 accent-[#166534]" />
-                Ingat saya
-              </label>
-              <button type="button" className="font-bold text-[#166534] hover:underline">
-                Lupa kata sandi?
-              </button>
-            </div>
-
             {error && (
               <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
                 {error}
@@ -182,52 +202,39 @@ export default function LoginPage() {
               {loading ? (
                 <div className="size-5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
               ) : (
-                <>
-                  Masuk ke Dashboard <ChevronRight size={18} />
-                </>
+                <>Masuk ke Dashboard <ChevronRight size={18} /></>
               )}
             </button>
           </form>
 
-          {/* Quick Demo Switcher */}
+          {/* Demo Accounts - Just pre-fills, still need to click Masuk */}
           <div className="mt-8 border-t border-slate-100 pt-6">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2 text-center">
-              Pilih Role Akun Demo:
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-3 text-center">
+              Pilih Role Demo (Kata sandi: agropos123)
             </span>
-            <div className="grid grid-cols-2 gap-2 text-[11px] font-semibold text-slate-600">
-              <button
-                type="button"
-                onClick={() => setDemoAccount('owner@agropos.id')}
-                className="rounded-xl border border-slate-200 bg-slate-50 p-2 hover:bg-emerald-50 hover:border-emerald-500 text-left"
-              >
-                👤 Owner (Arif)
-              </button>
-              <button
-                type="button"
-                onClick={() => setDemoAccount('kasir@agropos.id')}
-                className="rounded-xl border border-slate-200 bg-slate-50 p-2 hover:bg-emerald-50 hover:border-emerald-500 text-left"
-              >
-                🛒 Kasir (Budi)
-              </button>
-              <button
-                type="button"
-                onClick={() => setDemoAccount('gudang@agropos.id')}
-                className="rounded-xl border border-slate-200 bg-slate-50 p-2 hover:bg-emerald-50 hover:border-emerald-500 text-left"
-              >
-                📦 Gudang (Dedi)
-              </button>
-              <button
-                type="button"
-                onClick={() => setDemoAccount('supplier@agropos.id')}
-                className="rounded-xl border border-slate-200 bg-slate-50 p-2 hover:bg-emerald-50 hover:border-emerald-500 text-left"
-              >
-                🚚 Supplier (Petro)
-              </button>
+            <div className="grid grid-cols-2 gap-2">
+              {DEMO_ACCOUNTS.map((acc) => (
+                <button
+                  key={acc.email}
+                  type="button"
+                  onClick={() => setDemoAccount(acc)}
+                  className={`rounded-xl border p-2.5 text-left transition ${
+                    selectedRole === acc.role
+                      ? 'border-emerald-400 bg-emerald-50 text-emerald-800'
+                      : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-emerald-50 hover:border-emerald-300'
+                  }`}
+                >
+                  <div className="text-[11px] font-bold">{acc.label}</div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">{acc.name}</div>
+                </button>
+              ))}
             </div>
+            <p className="mt-3 text-center text-[10px] text-slate-400">
+              Klik akun demo → kata sandi otomatis terisi → klik Masuk
+            </p>
           </div>
         </div>
       </section>
     </main>
   )
 }
-

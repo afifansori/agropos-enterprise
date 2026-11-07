@@ -24,7 +24,9 @@ export interface Product {
   category: ProductCategory
   unit: string
   costPrice: number
-  sellPrice: number
+  sellPrice: number       // Harga Eceran
+  wholesalePrice: number  // Harga Grosir
+  wholesaleMinQty: number // Minimal qty untuk harga grosir
   minStock: number
   totalStock: number
   batches: BatchItem[]

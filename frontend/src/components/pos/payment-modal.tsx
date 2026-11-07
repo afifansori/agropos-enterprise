@@ -26,6 +26,8 @@ export function PaymentModal({ isOpen, onClose, onSuccess }: PaymentModalProps) 
     items,
     getGrandTotal,
     getSubtotal,
+    getDiscountAmount,
+    discountPercent,
     selectedCustomer,
     checkout,
   } = useCartStore()
